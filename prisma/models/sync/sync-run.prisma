@@ -1,0 +1,41 @@
+enum SyncScope {
+  ALL
+  COURSE
+  ITEM
+}
+
+enum SyncRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+// Uma execução do comando `sincronizar`: o que foi pedido, quanto levou e o que encontrou.
+model SyncRun {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  sourceAccountId String        @map("source_account_id") @db.Uuid
+  sourceAccount   SourceAccount @relation(fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  scope    SyncScope
+  // Id do curso ou do item quando o alcance não é `ALL`.
+  scopeRef String?   @map("scope_ref")
+
+  status     SyncRunStatus @default(RUNNING)
+  startedAt  DateTime      @default(now()) @map("started_at")
+  finishedAt DateTime?     @map("finished_at")
+
+  createdCount   Int @default(0) @map("created_count")
+  updatedCount   Int @default(0) @map("updated_count")
+  removedCount   Int @default(0) @map("removed_count")
+  unchangedCount Int @default(0) @map("unchanged_count")
+
+  // Código estável do erro (ex.: credencial recusada, fonte indisponível), não o texto cru da fonte.
+  errorCode    String? @map("error_code")
+  errorMessage String? @map("error_message")
+
+  changeEvents ChangeEvent[]
+
+  @@index([sourceAccountId, startedAt])
+  @@map("sync_runs")
+}

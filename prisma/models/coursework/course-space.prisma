@@ -1,0 +1,31 @@
+// A disciplina vista de dentro de UMA fonte: a turma virtual no SIGAA, o curso no Moodle, a sala no Classroom.
+// A mesma disciplina real vira até três course spaces. `sectionId` é o vínculo com a turma do semestre.
+model CourseSpace {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  sourceAccountId String        @map("source_account_id") @db.Uuid
+  sourceAccount   SourceAccount @relation(fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  externalId String @map("external_id")
+  name       String
+
+  // O casamento automático por nome é frágil (os nomes diferem entre sistemas). O sistema sugere o vínculo e a
+  // pessoa confirma: `linkConfirmedAt` nulo significa sugerido ou sem vínculo.
+  sectionId       String?   @map("section_id") @db.Uuid
+  section         Section?  @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  linkConfirmedAt DateTime? @map("link_confirmed_at")
+
+  // O que é específico da fonte e não tem coluna própria.
+  extra Json?
+
+  firstSeenAt DateTime  @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  items        Item[]
+  gradeEntries GradeEntry[]
+
+  @@unique([sourceAccountId, externalId])
+  @@index([sectionId])
+  @@map("course_spaces")
+}

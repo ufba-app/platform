@@ -12,3 +12,6 @@ coverage/
 fixtures-reais/
 
 .DS_Store
+
+# Prisma Client gerado
+generated/

@@ -1,0 +1,19 @@
+// Chave de API emitida pelo serviço. Só o hash é guardado; o valor completo é mostrado uma única vez.
+model ApiKey {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  keyHash String  @unique @map("key_hash")
+  // Primeiros caracteres, só para a pessoa reconhecer a chave numa lista.
+  prefix  String
+  label   String?
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  @@index([userId])
+  @@map("api_keys")
+}

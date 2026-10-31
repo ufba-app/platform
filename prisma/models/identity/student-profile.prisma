@@ -1,0 +1,15 @@
+// Identidade acadêmica, obtida na busca inicial do SIGAA. Tudo nulo até o onboarding acontecer.
+model StudentProfile {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  userId String @unique @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  registration String? // matrícula
+  programName  String? @map("program_name")
+  entryTerm    String? @map("entry_term") // período de ingresso, ex.: "2024.1"
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("student_profiles")
+}

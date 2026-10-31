@@ -1,0 +1,20 @@
+// Planejamento do próprio aluno: que componente pretende cursar em que semestre. Dado autoral, não vem de fonte
+// nenhuma, então precisa sobreviver a uma nova importação do histórico.
+model PlanItem {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  code  String
+  // Nome e carga ficam aqui, e não só no histórico, para o item continuar legível quando o histórico é reimportado
+  // e para servir a optativa escolhida pelo aluno, que nunca esteve na lista de pendentes.
+  name  String
+  hours Int
+  // Nulo significa "ainda sem semestre".
+  term  String?
+
+  // De propósito não é chave estrangeira para TranscriptPending: isso apagaria o planejamento a cada reimportação.
+  @@unique([userId, code])
+  @@map("plan_items")
+}

@@ -1,0 +1,35 @@
+enum ChangeEntityType {
+  COURSE_SPACE
+  ITEM
+  GRADE_ENTRY
+  CALENDAR_EVENT
+}
+
+enum ChangeKind {
+  CREATED
+  UPDATED
+  REMOVED
+}
+
+// O que mudou em cada sincronização. Responde "o que há de novo desde a última vez que olhei?" e é a base de
+// notificações futuras. `entityId` aponta para a tabela indicada por `entityType`, sem chave estrangeira (é polimórfico).
+model ChangeEvent {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  syncRunId String  @map("sync_run_id") @db.Uuid
+  syncRun   SyncRun @relation(fields: [syncRunId], references: [id], onDelete: Cascade)
+
+  sourceAccountId String        @map("source_account_id") @db.Uuid
+  sourceAccount   SourceAccount @relation(fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  entityType ChangeEntityType @map("entity_type")
+  entityId   String           @map("entity_id") @db.Uuid
+  change     ChangeKind
+  // Frase curta para listar sem precisar buscar a entidade (ex.: o título do item).
+  summary    String?
+
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  @@index([sourceAccountId, occurredAt])
+  @@map("change_events")
+}

@@ -1,0 +1,24 @@
+// Estrutura curricular de um curso (G20251, T20252…). Sempre a que o SIGAA marca como "Ativa".
+model Curriculum {
+  sigaaId String @id @map("sigaa_id")
+
+  programId String  @map("program_id")
+  program   Program @relation(fields: [programId], references: [sigaaId], onDelete: Cascade)
+
+  code                  String // "G20251": é o prefixo do currículo que aparece no histórico
+  implementationTerm    String @map("implementation_term")
+  totalHours            Int    @map("total_hours")
+  requiredHours         Int    @map("required_hours")
+  minElectiveHours      Int    @map("min_elective_hours")
+  minComplementaryHours Int    @map("min_complementary_hours")
+  minTerms              Int    @map("min_terms")
+  avgTerms              Int    @map("avg_terms")
+  maxTerms              Int    @map("max_terms")
+
+  fetchedAt DateTime @default(now()) @map("fetched_at")
+
+  components CurriculumComponent[]
+
+  @@unique([programId, code])
+  @@map("curricula")
+}

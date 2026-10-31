@@ -8,11 +8,35 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/platform
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
+      - run: npm run prisma:validate
+      - run: npm run prisma:generate
+      # Prova que a migração aplica num Postgres de verdade, e que o schema não divergiu dela.
+      - run: npm run prisma:deploy
+      - run: npx prisma migrate diff --from-config-datasource --to-schema prisma --exit-code
       - run: npm run build
       - run: npm test

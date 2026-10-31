@@ -1,0 +1,31 @@
+// Uma nota lançada numa disciplina. As notas do semestre corrente no SIGAA ainda não são lidas (o parser do boletim
+// nunca foi implementado); hoje vêm do Moodle e do Classroom. As de disciplinas concluídas estão no histórico.
+model GradeEntry {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  courseSpaceId String      @map("course_space_id") @db.Uuid
+  courseSpace   CourseSpace @relation(fields: [courseSpaceId], references: [id], onDelete: Cascade)
+
+  sourceAccountId String        @map("source_account_id") @db.Uuid
+  sourceAccount   SourceAccount @relation(fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  // A atividade que originou a nota, quando a fonte informa.
+  itemId String? @map("item_id") @db.Uuid
+  item   Item?   @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  externalId String    @map("external_id")
+  label      String
+  score      Decimal?  @db.Decimal(8, 3)
+  maxScore   Decimal?  @map("max_score") @db.Decimal(8, 3)
+  weight     Decimal?  @db.Decimal(8, 3)
+  gradedAt   DateTime? @map("graded_at")
+
+  contentHash String    @map("content_hash")
+  firstSeenAt DateTime  @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@unique([courseSpaceId, externalId])
+  @@index([sourceAccountId])
+  @@map("grade_entries")
+}

@@ -1,0 +1,24 @@
+// Turma de um semestre. Global: é a mesma para todos os alunos matriculados nela.
+// Chave natural vinda do atestado de matrícula: 2026.2 / ENGG54 / 02.
+model Section {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  term   String // "2026.2"
+  code   String // "ENGG54"
+  number String // "02"
+
+  name       String
+  instructor String?
+  validFrom  String  @map("valid_from")
+  validTo    String  @map("valid_to")
+  // Horários: lista de { dia, início, fim }. Formato definido pelo parser do atestado.
+  slots      Json
+
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  enrollments  Enrollment[]
+  courseSpaces CourseSpace[]
+
+  @@unique([term, code, number])
+  @@map("sections")
+}
