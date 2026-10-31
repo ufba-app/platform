@@ -1,0 +1,19 @@
+// Só metadados do arquivo. O conteúdo não é guardado: é buscado na fonte quando alguém pede (o link da fonte exige
+// autenticação que o agente não tem), com cache curto fora do banco.
+model Attachment {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  itemId String @map("item_id") @db.Uuid
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  externalId String? @map("external_id")
+  name       String
+  mimeType   String? @map("mime_type")
+  sizeBytes  BigInt? @map("size_bytes")
+  // Endereço do arquivo na fonte. Não é acessível sem as credenciais da pessoa.
+  sourceUrl  String? @map("source_url")
+  extra      Json?
+
+  @@unique([itemId, externalId])
+  @@map("attachments")
+}

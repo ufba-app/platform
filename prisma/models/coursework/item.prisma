@@ -1,0 +1,52 @@
+enum ItemKind {
+  ANNOUNCEMENT
+  ASSIGNMENT
+  ASSESSMENT
+  MATERIAL
+  FORUM_TOPIC
+  OTHER
+}
+
+// Qualquer coisa que uma disciplina publica: aviso, tarefa, prova, material, tópico de fórum.
+// Uma tabela só para as quatro fontes é o que permite perguntar "o que vence esta semana?" sem juntar estruturas.
+//
+// A varredura guarda o resumo; o conteúdo completo (`body`, anexos) só é buscado quando alguém pede aquele item,
+// e `detailFetchedAt` marca quando isso aconteceu.
+model Item {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  courseSpaceId String      @map("course_space_id") @db.Uuid
+  courseSpace   CourseSpace @relation(fields: [courseSpaceId], references: [id], onDelete: Cascade)
+
+  // Repetido a partir do course space para as consultas filtrarem pelo dono sem junção. Deve coincidir com ele.
+  sourceAccountId String        @map("source_account_id") @db.Uuid
+  sourceAccount   SourceAccount @relation(fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  kind       ItemKind
+  externalId String   @map("external_id")
+
+  title       String
+  body        String?
+  dueAt       DateTime? @map("due_at")
+  publishedAt DateTime? @map("published_at")
+  // Estado do aluno naquele item, como a fonte o informa (entregue, atrasado…). Texto: varia entre fontes.
+  state       String?
+  extra       Json?
+
+  // Hash do conteúdo, para detectar "alterado" sem comparar campo a campo (domain/sync).
+  contentHash     String    @map("content_hash")
+  detailFetchedAt DateTime? @map("detail_fetched_at")
+
+  firstSeenAt DateTime  @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at")
+  // Marcado quando some da fonte, em vez de apagar: preserva o histórico de mudanças.
+  deletedAt   DateTime? @map("deleted_at")
+
+  attachments  Attachment[]
+  gradeEntries GradeEntry[]
+
+  @@unique([courseSpaceId, kind, externalId])
+  @@index([sourceAccountId, dueAt])
+  @@index([sourceAccountId, publishedAt])
+  @@map("items")
+}

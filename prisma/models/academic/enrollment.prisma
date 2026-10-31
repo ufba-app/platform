@@ -1,0 +1,14 @@
+// Matrícula do aluno numa turma. Substituída por inteiro a cada atualização do atestado:
+// o que vem do SIGAA é o estado completo do semestre.
+model Enrollment {
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sectionId String  @map("section_id") @db.Uuid
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([userId, sectionId])
+  @@map("enrollments")
+}

@@ -3,7 +3,7 @@
 Registro das decisões de arquitetura do serviço. Explica o que foi decidido e **por quê**, o que de DDD foi adotado (e o que não foi), e o que ficou para depois.
 
 - Decisão: 2026-10-31, em conversa com o autor do projeto.
-- Estado: só o esqueleto existe (camadas, teste de arquitetura, detecção de mudança e `GET /health`). Nenhuma fonte está integrada ainda.
+- Estado: existem o esqueleto (camadas, teste de arquitetura, detecção de mudança, `GET /health`) e o schema do banco com a migração inicial. Nenhuma fonte está integrada ainda.
 
 ## 1. Contexto
 
@@ -66,22 +66,48 @@ A sincronização acontece quando alguém pede. Agendador, fila (BullMQ), webhoo
 
 Cada `sincronizar` compara o que veio da fonte com o que está no banco pelo **hash do conteúdo** (`domain/sync`) e registra o que é novo, alterado ou removido. Esse registro responde "o que mudou desde a última vez que olhei?" e alimenta notificações no futuro.
 
-## 3. Modelo de dados (direção)
+## 3. Modelo de dados
 
-Este PR não traz schema. A direção, a detalhar no PR do schema:
+O schema está em `prisma/`, dividido por grupo em `prisma/models/<grupo>/` (Prisma 7, `schema: 'prisma'`). Os identificadores são em inglês; os termos do SIGAA ficam na fronteira (no parser) e neste glossário.
 
 ```
-IDENTIDADE      user · api_key (só hash) · source_account (token cifrado, estado)
-CATÁLOGO        curso · estrutura_curricular · componente · docente
-VIDA ACADÊMICA  turma · matrícula · histórico · plano
-TRABALHO        course_space · item · attachment · grade_entry · calendar_event
-CONTROLE        sync_run · change_event
+identity/    users · api_keys · source_accounts · student_profiles
+catalog/     programs · curricula · curriculum_components          (global, público)
+academic/    sections · enrollments · transcripts (+ entries, pending) · plan_items
+coursework/  course_spaces · items · attachments · grade_entries · calendar_events
+sync/        sync_runs · change_events
 ```
 
-- Um `item` único, com `tipo` (aviso, tarefa, prova, material, nota…) e um JSON para o que é específico da fonte.
-- Itens pertencem a uma `source_account`: um aluno nunca vê o que é de outro.
-- Anexos: só metadados no banco. O conteúdo é buscado na fonte sob demanda, com cache curto.
-- O histórico escolar é extraído por **IA** (provedor configurável por variável de ambiente), seguido de validação contra o próprio documento (carga horária e CR recalculados). Só o histórico usa IA.
+| SIGAA (português) | Modelo |
+|---|---|
+| curso | `Program` |
+| estrutura curricular | `Curriculum` |
+| componente curricular | `CurriculumComponent` |
+| turma | `Section` |
+| matrícula (na turma) | `Enrollment` |
+| histórico | `Transcript` (`TranscriptEntry`, `TranscriptPending`) |
+| plano de curso do aluno | `PlanItem` |
+
+### 3.1 Decisões de modelagem
+
+- **Tudo que vem das fontes pertence a uma `SourceAccount`**, nunca direto ao usuário: um aluno nunca vê o que é de outro. Só o catálogo (`programs`, `curricula`, `curriculum_components`) e as turmas (`sections`) são globais, porque são públicos e iguais para todos.
+- **`SourceAccount` do SIGAA nunca tem segredo.** As colunas `secret_*` ficam nulas; só Moodle e Google guardam token, cifrado. O Prisma não expressa essa restrição, então ela terá de ser garantida pelo código que grava contas, com teste, quando esse caso de uso existir (ver §2.3). Hoje nada grava nesta tabela.
+- **Um `Item` único**, com `kind` (aviso, tarefa, prova, material, fórum) e um JSON `extra` para o que é específico da fonte. É o que permite "o que vence esta semana?" sem juntar quatro estruturas.
+- **Uma disciplina real vira até três `CourseSpace`** (SIGAA, Moodle, Classroom). `sectionId` liga ao `Section`; o vínculo é sugerido pelo sistema e confirmado pela pessoa (`linkConfirmedAt`), porque casar por nome é frágil.
+- **Remoção lógica** (`deletedAt`) em tudo que a sincronização pode ver sumir, para preservar o histórico de mudanças. `firstSeenAt` e `lastSeenAt` registram quando apareceu e quando foi visto pela última vez.
+- **Anexos: só metadados.** O conteúdo é buscado na fonte sob demanda, com cache curto fora do banco.
+- **`Transcript` guarda só dado acadêmico**: sem CPF, nascimento nem nome do aluno. `status` e `nature` das linhas são texto de propósito, porque o documento usa muitas siglas e a extração não deve falhar por uma sigla nova. A matriz de carga horária fica como o documento a declara, para a validação recalcular e comparar.
+- **O histórico é extraído por IA** (provedor configurável por variável de ambiente), seguido de validação contra o próprio documento (carga horária e CR recalculados). Só o histórico usa IA.
+- **`PlanItem` é dado autoral**, não vem de fonte nenhuma, e por isso não é chave estrangeira do histórico: sobrevive à reimportação.
+- **Sem TTL de atualização.** Nenhuma tabela tem `staleAfter`: o serviço não atualiza sozinho (§2.2), e quem lê decide pela idade do dado (`fetchedAt`, `lastSeenAt`).
+
+### 3.2 O que ficou de fora (de propósito)
+
+Não foram portados do app antigo: perfil de docentes (`Instructor` e a busca por nome), pontos de atenção e votos, faltas, caches de notas e horário, vínculo cifrado com a senha do SIGAA, push e versões do app. Docentes volta quando houver caso de uso; o resto não pertence ao núcleo.
+
+### 3.3 Banco compartilhado
+
+O serviço pode dividir um Postgres com outro projeto usando um schema próprio (`?schema=platform` em `DATABASE_URL`, criado antes com `CREATE SCHEMA platform;`). As migrações não citam o nome do schema, então valem em qualquer um, inclusive `public`.
 
 ## 4. O que de DDD foi adotado, e o que não foi
 

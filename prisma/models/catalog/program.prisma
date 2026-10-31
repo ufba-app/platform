@@ -1,0 +1,14 @@
+// Catálogo global de cursos da UFBA (todos os níveis). É público e idêntico para todo aluno, então não pertence a ninguém.
+model Program {
+  sigaaId String @id @map("sigaa_id")
+
+  name   String
+  campus String
+  level  String // graduação, especialização, mestrado, doutorado
+
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  curricula Curriculum[]
+
+  @@map("programs")
+}

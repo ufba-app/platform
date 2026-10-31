@@ -1,0 +1,73 @@
+// Histórico escolar de um aluno. Só dados acadêmicos: sem CPF, nascimento ou nome do aluno.
+// Substituído por inteiro a cada importação: o documento é o estado completo.
+model Transcript {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  userId String @unique @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  issuedAt       DateTime @map("issued_at")
+  curriculumCode String   @map("curriculum_code")
+  programName    String   @map("program_name")
+  currentTerm    Int      @map("current_term")
+  standardTerms  String   @map("standard_terms")
+  maxTerms       String   @map("max_terms")
+
+  cr  Decimal? @db.Decimal(6, 4)
+  iap Decimal? @db.Decimal(6, 4)
+
+  // Matriz de carga horária que o próprio documento declara:
+  // { required|elective|complementary|total: { required, done, pending } }.
+  // Guardada como o documento afirma, para a validação recalcular a partir dos componentes e comparar.
+  hoursMatrix Json @map("hours_matrix")
+
+  equivalences String[]
+  notes        String[]
+
+  fetchedAt DateTime @default(now()) @map("fetched_at")
+
+  entries TranscriptEntry[]
+  pending TranscriptPending[]
+
+  @@map("transcripts")
+}
+
+// Uma linha do histórico. `status` e `nature` ficam como texto de propósito: o documento usa muitas siglas
+// diferentes, e a extração não deve falhar por causa de uma sigla nova.
+model TranscriptEntry {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  transcriptId String     @map("transcript_id") @db.Uuid
+  transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  term       String
+  nature     String? // vazio em trancamento
+  code       String
+  name       String
+  hours      Int
+  grade      Decimal? @db.Decimal(3, 1) // nulo quando o documento imprime "--"
+  status     String
+  instructor String?
+
+  // O semestre entra na chave: o mesmo código se repete entre semestres (trancado num, aprovado noutro).
+  @@unique([transcriptId, term, code])
+  @@index([transcriptId, term])
+  @@map("transcript_entries")
+}
+
+// Componente que ainda falta cursar.
+model TranscriptPending {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  transcriptId String     @map("transcript_id") @db.Uuid
+  transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  code     String
+  name     String
+  hours    Int
+  enrolled Boolean
+
+  // O nome entra na chave: o ENADE aparece duas vezes com nomes diferentes.
+  @@unique([transcriptId, code, name])
+  @@map("transcript_pending")
+}

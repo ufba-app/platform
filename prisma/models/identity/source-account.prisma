@@ -1,0 +1,54 @@
+enum SourceProvider {
+  SIGAA
+  MOODLE
+  CLASSROOM
+  CALENDAR
+}
+
+enum SourceAccountStatus {
+  OK
+  // O token expirou ou foi revogado: a pessoa precisa autenticar de novo.
+  REAUTH_NEEDED
+  // A fonte bloqueou o acesso (WAF, captcha, manutenção).
+  BLOCKED
+}
+
+// Uma conta do usuário em uma fonte. Tudo que vem das fontes pertence a uma conta, nunca direto ao usuário:
+// um aluno jamais vê o que é de outro.
+//
+// REGRA: a conta do SIGAA NUNCA tem segredo. As colunas `secret_*` ficam nulas para ela, porque a senha do SIGAA só
+// existe na requisição e é descartada. Só fontes com API oficial (Moodle, Google) guardam token, cifrado.
+// O Prisma não expressa essa restrição; ela é garantida pelo código (ver docs/ARQUITETURA.md §2.3).
+model SourceAccount {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider   SourceProvider
+  // Identifica a conta dentro da fonte: "sigaa", host do Moodle + usuário, e-mail do Google.
+  accountKey String         @map("account_key")
+  siteUrl    String?        @map("site_url")
+
+  status       SourceAccountStatus @default(OK)
+  statusReason String?             @map("status_reason")
+
+  // Token cifrado (AES-256-GCM); os três vêm juntos ou nenhum vem.
+  secretCiphertext String? @map("secret_ciphertext")
+  secretIv         String? @map("secret_iv")
+  secretAuthTag    String? @map("secret_auth_tag")
+
+  lastSyncedAt DateTime? @map("last_synced_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  courseSpaces   CourseSpace[]
+  items          Item[]
+  gradeEntries   GradeEntry[]
+  calendarEvents CalendarEvent[]
+  syncRuns       SyncRun[]
+  changeEvents   ChangeEvent[]
+
+  @@unique([userId, provider, accountKey])
+  @@map("source_accounts")
+}

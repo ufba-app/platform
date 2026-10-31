@@ -1,0 +1,30 @@
+enum ComponentNature {
+  REQUIRED
+  ELECTIVE
+  COMPLEMENTARY
+}
+
+model CurriculumComponent {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  curriculumId String     @map("curriculum_id")
+  curriculum   Curriculum @relation(fields: [curriculumId], references: [sigaaId], onDelete: Cascade)
+
+  // Id do próprio componente no SIGAA, usado para buscar a página de detalhe.
+  sigaaId String          @map("sigaa_id")
+  code    String
+  name    String
+  hours   Int
+  nature  ComponentNature
+  // Nulo para optativas e complementares.
+  term    Int?
+
+  responsibleUnit  String? @map("responsible_unit")
+  // Expressões como o SIGAA escreve: "(FISD36 E FISD42) OU (ENGJ18)". Interpretadas no domínio.
+  prerequisiteExpr String? @map("prerequisite_expr")
+  corequisiteExpr  String? @map("corequisite_expr")
+  equivalenceExpr  String? @map("equivalence_expr")
+
+  @@unique([curriculumId, code])
+  @@map("curriculum_components")
+}

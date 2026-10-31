@@ -1,0 +1,27 @@
+// Evento de calendário (Google Calendar). Separado de `Item` porque não pertence a uma disciplina.
+model CalendarEvent {
+  id String @id @default(uuid(7)) @db.Uuid
+
+  sourceAccountId String        @map("source_account_id") @db.Uuid
+  sourceAccount   SourceAccount @relation(fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  calendarId String @map("calendar_id")
+  externalId String @map("external_id")
+
+  title       String
+  description String?
+  location    String?
+  startsAt    DateTime  @map("starts_at")
+  endsAt      DateTime? @map("ends_at")
+  allDay      Boolean   @default(false) @map("all_day")
+  status      String?
+
+  contentHash String    @map("content_hash")
+  firstSeenAt DateTime  @default(now()) @map("first_seen_at")
+  lastSeenAt  DateTime  @default(now()) @map("last_seen_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@unique([sourceAccountId, calendarId, externalId])
+  @@index([sourceAccountId, startsAt])
+  @@map("calendar_events")
+}
