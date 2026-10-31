@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+*.log
+
+# Ambiente e segredos: nunca no Git
+.env
+.env.*
+!.env.example
+
+# Fixtures com dado real de aluno ficam fora do repositório
+fixtures-reais/
+
+.DS_Store
